@@ -1,0 +1,206 @@
+---
+title: "Eksamens opgave 2 - OLS og misspecifikation"
+author: "Lars Boerty Nielsen - 20134303"
+date: "25 sep 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+Betragt følgende to modeller for bankansattes løn:
+
+$$salary=\beta_0 +\beta_1 educ +\beta_2 salbegin +\beta_3 male +\beta_4 minority + u$$
+$$log(salary)=\beta_0+\beta_1 educ +\beta_2 log(salbegin)+\beta_3 male +\beta_4 minority +u$$
+  
+- $salary$ er årsløn (i 1000 US dollars)
+- $educ$ er uddannelse målt i antal år
+- $salbegin$ er startlønnen (i 1000 US dollars) for personens første stilling i samme bank
+- $male$ er en dummy-variabel for køn 
+- $minority$ er en dummy-variabel der angiver om man tilhører en minoritet
+
+Datasættet data1, som er tilgængelig påMoodle, indeholder disse variable målt for
+474 bankansatte.
+
+##Data
+```{r, echo=FALSE,warning=FALSE, message=FALSE}
+rm(list=ls(all=T))
+library(readr)
+library(texreg)
+library(lmtest)
+library(car)
+data <- read_csv("educ_salary_data.csv")
+
+#afhængige variabel
+salary<-data$salary
+
+#Uafhængige variabler
+lsalary<-data$lsalary
+educ<-data$educ
+salbegin<-data$salbegin
+lsalbegin<-log(salbegin)
+male<-data$male
+minority<-data$minority
+```
+
+##1. Estimer de to modeller vha. OLS. Kommenter på outputtet, sammenlign og fortolk resultaterne.
+```{r}
+reg1<-lm(salary~educ+salbegin+male+minority)
+reg2<-lm(lsalary~educ+lsalbegin+male+minority)
+screenreg(list(MODEL1 = reg1, MODEL2 = reg2), digits = 4)
+```
+ 
+
+**Model 1:** Vi kan se at alle estimaterne er signifikante, og har de fortegn vi ville forvente. I denne model 1 skal alle estimater tolkes level-level, og det er ligefrem. Vi kan forklare 79% af variationen i dataen med vores uafhængige variabler.
+
+
+**Model 2:** 
+again the same points remain valid as before. But this time we interpert the model both log-level and log-log
+
+education, male and minority is log-level and their beta values can be understood as 1 unit change in education yields 2.3% increase in pay and likewise for male and minority (4% and -4%)
+
+starting salary is also log, this means that 1% change in startingsalary is equal to 0.8% change in curren salary
+
+**Begge modeller**
+For begge modeller skal det dog understreges at gradena af racisme undervurderes hvis man medtager startløn, det er klart at hvis denne holdes fast får man ikke den racisme med der kunne gøre at lønnen er laver til at starte med.
+
+
+
+\pagebreak
+
+##2. Udfør grafisk modelkontrol af de to modeller. Hvilken model vil du foretrække?
+```{r}
+#R har indbygget modelkontrol
+par(mfrow = c(2, 4))
+plot(reg1)
+plot(reg2)
+```
+
+\begin{itemize}
+\item 1. Plot:
+Resudialer sammen med de estimerede værdier. Dette plot kan vise tegn på "ikke linære sammenhæng" eller hetroskedacitet. I dette tilfælde ser vi lidt tendens til en ikke linær sammenhæng, dette er korrigeret i den anden regressionsmodel.
+
+\item 2. Plot:
+QQ-plottet viser om residualerne  er normaltfordelt, for første model kan vi se at den ikke er. Eftersom at begge drejer af mod uret er der flere observationer i halerne også kaldet leptokurtosis. Dette kan være et problem hvis vi ikke har en stor sample størrelse.
+
+\item 3. Plot:
+Igen en test for hetroskedasitet, her ser vi igen at 2. model er bedre da den ikke viser hetroskedasticitet
+
+\item 4. Plot:
+Vi kan se at for den første model er der større outliers. Dette giver god mening da vi har taget ln() til den 2. model. Det er dog ikke god skik at tage ln() bare for at mindske outliers. Outliers kan jo godt være reel information i 
+\end{itemize}
+
+###Konklusion
+Den 2. model er bedre da indkomst ikke er linært fordelt. Dette kan vi rette ved at tage ln(indkomst) dette gør at variansen i modellen er mindre.
+
+\pagebreak
+
+##3. Undersøg om de to modeller er misspecificerede vha. RESET-testet.
+```{r}
+#først udregner R RESET-testen som handler om at finde om modellen er funktionelt misspecificeret som betyder at modellen ikke korrekt viser forholdet mellem den afhængige og den uafhængige variabel
+resettest(reg1)
+resettest(reg2)
+
+#Manuel udregning af RESET-testen
+#først definerer jeg de variabler der skal bruges i den nye regression hvor vi indsætter fittet values ^2 og ^3
+reg1reset1 <- reg1$fitted.values^2
+reg1reset2 <- reg1$fitted.values^3
+reg2reset1 <- reg2$fitted.values^2
+reg2reset2 <- reg2$fitted.values^3
+
+#Jeg kører mine nye regressioner
+reg5<-lm(salary~educ+salbegin+male+minority+reg1reset1+reg1reset2)
+reg6<-lm(lsalary~educ+lsalbegin+male+minority+reg2reset1+reg2reset2)
+
+#nu skal jeg teste for estimaterne for de nye estimater alle er = 0, det kan jeg ikke gøre vha. standart F-test da denne medtager de andre estimater. Jeg laver en F-test for en joint hypothesis
+reg1conditions <- c("reg1reset1=0", "reg1reset2=0")
+reg2conditions <- c("reg2reset1=0", "reg2reset2=0")
+linearHypothesis(reg5, reg1conditions)
+linearHypothesis(reg6, reg2conditions)
+#Vi kan se at den manuelle RESET-test får samme P-værdi som den automatiske
+```
+
+Vi kan se på resultaterne giver henholdsvis P=0.0606 (model1) og P=0.0439 (model2) 
+Vores H0 er at der ikke er en funktionel misspicifikation og derfor kan vi konkuderer
+
+model 1 = vi kan med 5% signifikansniveau ikke afvise h0, og vi konkluderer at moodellen ikke er fnktionelt mispeficeret (god)
+model 2 = Vi kan med 5% signifikansniveau afvise h0 og vi konkluderer at modellen er funktionelt misspeciferet (dårlig)
+
+\pagebreak
+
+##4. Forklar hvorfor det kunne være relevant at medtage $educ^2$ som forklarende variabel i de to modeller. Estimer de to modeller igen hvor $educ^2$ inkluderes (med tilhørende koefficient $\beta_5$), kommenter kort på outputtet og udfør RESET-testet igen.
+
+```{r}
+educ2 <- educ^2
+
+reg3 <- lm(salary~educ+salbegin+male+minority+educ2)
+reg4 <- lm(lsalary~educ+lsalbegin+male+minority+educ2)
+
+screenreg(list(MODEL.1=reg1, MODEL.1.EDUC2=reg3, MODEL.2=reg2, MODEL.2.EDUC2=reg4), digits=4)
+
+resettest(reg3)
+resettest(reg4)
+```
+når educ2 er medtaget er ingen af modellerne misspecificerede, men educ2 er kun signifikant i model 1 og ikke i modellen hvor vi har taget log(løn).
+
+
+##5. Test hypotesen $H0 : \beta_1 = \beta_5 = 0$ i begge modeller (fra spørgsmål 4).
+Vi vil undersøge om den ekstra educ2 sammen med educ er signifikant. Dette kan gøres ved en F-test hvor vi laver en restricted model, og derfra bruger SSR-værdierne (q = antal parametre fjernet i den restricted)
+
+$$H_0 : \beta_1 = \beta_5 = 0$$
+$$F \equiv \frac{(SSR_r-SSR_{ur})/q} {SSR_{ur}/(n-k-1)}$$
+Vi kan gøre det i R nemt, det kan også gøres manuelt hvilket jeg har gjort i opgave 1
+```{r}
+H0 <- c("educ=0", "educ2=0")
+linearHypothesis(reg3, H0)
+linearHypothesis(reg4, H0)
+```
+
+I begge modeller er p-værdierne lave, og det gør at vi kan forkaste $H_0$(som siger de er nul) og derfor er de ikke 0, så de har altså sammenlagt en betydning
+
+
+\pagebreak
+
+##6. Kunne der være problemer med målefejl i de to modeller? I hvilke tilfælde vil det udgøre et problem?
+Målefejl kan forekomme både i de uafhængige variable og den afhængige variabel. De kan opstå, hvis der anvendes upræcise mål for variablene.
+
+**målefejl i den afhængige variabel (løn)**
+
+$$y^*_i=\beta_0+\beta_1x_1+\beta_2x_2+\dots +\beta_kx_k+u$$
+målefejlen er givet ved: $e_0=y-y^* \rightarrow y^*=y-e_0$.
+
+dermed kan den originale model omskrives:
+
+$$y=\beta_0+\beta_1x_1+\beta_2x_2+\dots +\beta_kx_k+(u+e_0)$$
+Det ses at fejlledet ved målefejl i den afhængige variabel nu er større, men det giver umiddelbart ikke problemer så længe, fejlledet er uafhængigt af de uafhængige variable, når dette ikke er tilfældet, kan der opstå biasedness i modellen. 
+
+I variablen salary kan forventes målefejl, såfremt folk har svaret sådan cirka hvad de tjener i stedet for eksakte tal. En måde at løse problemet på kunne være at øge antallet af observationer.
+
+**Målefejl i de ufafhængige vaiabler (uddannelse, startløn, køn, race)**
+hvis der f.eks. er udeladte evner, når der ses på uddannelses effekt på salary.
+
+$$y=\beta_0+\beta_1x^*_1+u$$
+Antag at målefejlen i $x_1^*$ er givet ved: $e_1=x_1-x_1^* \rightarrow x_1^*=x_1-e_1$. Denne kan være positiv eller negativ. 
+Indsættes dette i den originale model fås:
+$$y=\beta_0+\beta_1(x^*_1-e_1)+u \rightarrow y=\beta_0+\beta_1x_1-\beta_1e_1+u $$
+hvor $E(u)=E(e)=0$.
+
+$e_1$ skal ikke være korreleret med $x_1$, der er den observerede værdi. Er det tilfældet er der ikke et problem. Dog er det et problem, hvis $e_1$ er ukorreleret med den faktiske $x$, og således korreleret med den observeret $x$. Dette vil give biasedness og inkonsistens, og vil påvirke hele model estimationen, selvom det kun er en variable der er målefejl i. Derudover kan variansen påvirkes større end uden målefejl. 
+
+Det kunne være at de adspurgte i stikprøven, siger de har mere uddannelse end de faktisk har. Det kan også være de har mange års uddannelse, men at det er i forskellige brancher, erhversuddannelse kontra gymnasium og universitet.
+
+Det kan også afhænge af hvor data stammer fra, hvis en praktikant bliver sat til at udfylde spørgeskemaet og ikke kender de eksakte tal, og chefen har måske incitament til at overestimere tallene.
+
+\pagebreak
+
+##7. Beregn den prædikterede løn, salary, for hver af de to modeller (fra spørgsmål 4) for de 474 observationer. På baggrund af disse, hvilken model vil du så foretrække?
+
+$$\bar{R}^2=1-\frac{SSR/(n-k-1)}{SST(n-1)}$$ 
+Den justerede R2 kan ses i summary i de originale modeller
+
+```{r}
+y1<-14.7651078+(-2.3340086*educ)+(1.4861052*salbegin)+(1.8290734*male)+(-1.6535355*minority)+(0.1325267*(educ^2))
+
+y2<-1.188632947+(-0.016785373*educ)+(0.782093764*lsalbegin)+(0.050895778*male)+(-0.042308975*minority)+(0.001621298*(educ^2))
+```
+
+
+\pagebreak

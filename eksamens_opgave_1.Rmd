@@ -1,0 +1,320 @@
+---
+title: "Eksamens opgave 1 - OLS og Hetroskedasticitet"
+author: "Lars Boerty Nielsen - 20134303"
+date: "25 sep 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+Betragt følgende model for bankansattes løn:
+$$\log(salar y) = \beta_0+\beta_1educ +\beta_2 log(salbeg in)+\beta_3male +\beta_4minor i t y +u$$
+  
+ - $salary$ er årsløn (i 1000 US dollars)
+ - $educ$ er uddannelse målt i antal år
+ - $salbegin$ er startlønnen (i 1000 US dollars) for personens første stilling i samme bank
+ - $male$ er en dummy-variabel for køn
+ - $minority$ er en dummy-variabel der angiver om man tilhører en minoritet
+
+Datasættet data1, som er tilgængelig påMoodle, indeholder disse variable målt for 474 bankansatte.
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE}
+library(readr)
+library(texreg)
+library(lmtest)
+library(sandwich)
+library(foreign)
+library(car)
+data1<-read_csv("educ_salary_data.csv")
+
+#Afhængige variabel
+lsalary=data1$lsalary
+
+#Uafhængige variabler
+educ=data1$educ
+lsalbegin=data1$lsalbegin
+male=data1$male
+minority=data1$minority
+```
+
+##Opgave 1: Estimer modellen vha. OLS. Kommenter på outputtet og fortolk resultaterne.
+```{r}
+#MLR - Multiple linær regression
+lm<-lm(lsalary ~ educ + lsalbegin + male + minority)
+summary(lm)
+
+library(ggplot2)
+ggplot(data1, aes(lsalary, educ)) + 
+  geom_point() + 
+  geom_smooth(method='lm')
+
+```
+Det kan her ses at modellen som er log - level (udover lsalbegin) 
+  
+- alle er signifikante på et 5% niveau
+- 1 års uddannelse give 2% højere løn
+- at være mand giver 4% højere løn
+- at være minioritet giver ca. 4% lavere løn
+- log-log 1% højere startløn giver 0.8% højere løn
+
+ud fra $R^2$ "goodness of fit" er 80% af lønnens variation forklaret med parametrene (hvis det kun er uddannelse der er den uafhængige parameter så kan 48% af lønnen forklares af dette) 
+
+$$SST = SSE + SSR$$
+$$R^2 \equiv SSE/SST = 1-SSR/SST$$
+$$SSE=\sum_{i=1}^{n}(\hat{y_i}-\bar{y})^2 
+\qquad SST=\sum_{i=1}^{n}({y_i}-\bar{y})^2 
+\qquad SSR=\sum_{i=1}^{n}(\hat{u_i})^2$$
+
+Al variation i en variabel y kan, med en uafhængig variabel, x, forklares med to ting: den del af variationen der forklares af x (SSE) og den del der ikke forklares af x (SSR). Vi har $R^2$ som er et mål for hvor meget vi kan forklare.
+
+OLS mål er at minimere SSR 
+
+Vi kan også se at uddannelse og start løn er meget signigikante, mens køn og minioritet ikke er særligt, men kan dog afvise at der ikke er nogen effekt på 5% signifikansniveau.
+
+(En detalje er at modellen måske ikke fanger alt diskriminationen. Vi skal forstå minority estimatet som når de andre faktorere holdes fast, dette giver selvfølgelig mening med uddannelse, at sammenligne minoritet og ikke minoritet på samme uddannelsesniveau, men vi holder også startlønnen fast og kan derfor ikke se om en minoritet til at starte med betales mindre. Dette bekræftes hvis vi fjerner lsalbegin fra modellen så får vi en væsentligt højere diskrimination af minioriteter.)
+
+\pagebreak
+
+##Opgave 2: Udfør grafisk modelkontrol.
+```{r, echo=FALSE}
+par(mfrow = c(2,4))
+plot(lm)
+#correlation between salary and education
+plot(lsalary~educ, pch=16, cex=1.3, main = "Løn ~ uddannelse", xlab = "Uddannelse i år", ylab = "Log salary")
+abline(lm(lsalary~educ))
+
+#correlation between salary and sex
+plot(lsalary~male, pch=16, cex=1.3, main = "Løn ~ køn", xlab = "Male 1 = ja", ylab = "Log salary")
+abline(lm(lsalary~male))
+
+#correlation between salary and minority
+plot(lsalary~minority, pch=16, cex=1.3, main = "Løn ~ minioritet", xlab = "Minoritet 1 = ja", ylab = "Log salary")
+abline(lm(lsalary~minority))
+
+#correlation between salary and starting salary
+plot(lsalary~lsalbegin, pch=16, cex=1.3, main = "Løn ~ startløn", xlab = "Log startløn", ylab = "Log salary")
+abline(lm(lsalary~lsalbegin))
+```
+
+1. graf kan man se at residualerne er linære og normaltfordelte
+
+2. graf bekræftes det at residualerne er normaltfordelte, med et par outliers, dette er vigtigt i forhold til hypotesetest og se()
+
+3. graf ser også fin ud da der ikke er nogle større udsving i de standardiserede residualer over de fittede værdier 
+
+4. graf viser at der ikke er store outliers
+
+På de 4 sidste grafer er der individuelle regressioner og de bekrafter forholdet i den oprindelige korrelation mellem de 3 positive og en negativ mellem løn og minioritet
+
+\pagebreak
+
+##Opgave 3: Test for heteroskedasticitet vha. Breusch-Pagan-testet og specialudgaven af White-testet
+Hetroskedasticitet er når variansen ikke er konstant over $u$ Dette skal være opfyldt i for at kunne hypoteseteste og udregne standard fejl. Her ses kravet for hetroskedasticitet, $H_1$:
+$$H_0=Var(u|x)=\sigma^2 
+\qquad 
+H_1=Var(u|x)\neq\sigma^2 
+$$
+
+BP-testen og specialudgaven af White testen kan teste for hetroskedasticitet ($h_0$ er i begge tilfælde er **homoskedasticitet**). Begge test tager udgangspunkt i sqres ($\hat{u}^2$)  
+* hvor BP-testen laver en ny regression ift. de uafhængige variabler (og benytter en lagrange multiplier test LM)
+* en specielle White gør det ift. fitted values og kvardrede fitted values.
+
+$$u^2=\delta_0+\delta_1x_1+\delta_2x_2+.+\delta_kx_k+v$$
+$$LM=R^2_{\hat{u}} *n$$
+
+Først gennemgår vi Breusch-Pagan-testen
+```{r,warning=FALSE}
+#Manuel BP-test - Jeg tager "squared residuals" (u^2)
+sqres<-(lm$residuals)^2
+
+#Jeg kører nu en ny regression med sqres som afhængig variabel (her kan BP-testen med F-statistikken aflæses direkte)
+lm2<-lm(sqres ~ educ + lsalbegin + male + minority)
+summary(lm2)
+
+#Nu laver vi BP-testen med LM-statistikken hvor vi bruger r^2 værdien fra vores regression
+r2<-0.02923
+1-pchisq((r2*length(data1$salary)),4)
+
+#Breusch-Pagan-test med R (bruger som standard LM-statistikken)
+bptest(lm)
+```
+- **BP-test med F-statistikken: P=0.00747**  
+For effekten på de kvardrede residualer kan vi afvise at den er homoskedastisk, vores $H_0$, den er altså hetroskedastisk. Det vil altså sige at de uafhængige variabler kan forklare ændringer i residualerne
+
+- **BP-test med LM-statistikken P=0.00776**  
+LM-statistikken (som benytter en chi^2 fordeling) bekræfter hvad vi ved fra F-statistikken (kan afvises på 5% signifikansniveau)
+
+Modellen lider altså derfor af hetroskedasicitet. Det betyder at variansen af residualerne ikke er konstant over regressionen. Det bryder med MLR5 antagelsen om at 
+
+$$var(u\mid x_1,...,x_k)=\sigma^2$$
+Dette betyder at vores model bryder med BLUE (Best Linary Unbiased Model)
+
+Nu undersøger vi med White testen (s.253)
+```{r}
+#Vi skal bruge fittedvalues^2 for at bruge specialudgaven af White testen
+sqfitted<-(lm$fitted.values)^2
+#Nu kører vi en ny regression med disse og fitted values sammen med residualerne^2 
+lm3<-lm(sqres ~ lm$fitted.values + sqfitted)
+summary(lm3)
+#Vi aflæser den nye r^2 værdi som bruges ved F og LM testen (F-testen er kan allerede aflæses i summary)
+r2.1<-0.02295
+1-pchisq((r2.1*length(data1$salary)),2)
+```
+
+
+- **White-test med F-statistikken: P=0.00422**
+- **White-test med LM-statistikken: P=0.00434**
+
+Her kan vi igen afvise homoskedacitet ved 5% signifikansniveau
+
+\pagebreak
+
+##Opgave 4: Beregn robuste standardfejl for modellen og sammenlign med resultaterne i spørgsmål 1.
+Vi kan udregne disse med R: disse er anderledes fordi at modellen udviser hetroskedasitet. Udregningen af disse er en nyere metode og matematisk uden for pensum, men den korregerer for ukendt hetroskedasticitet. Den kan gøre dette på flere måder som afhænger af hvordan data ser ud. Jeg bruger HC0
+
+$$
+\text{SLR: robuste varians:}  \qquad
+var(\beta_1)=\frac{\sum_{i=1}^{n}(x_i-\bar{x})^2\sigma^2_{i}}{SSR_x^2}
+\qquad \rightarrow \qquad
+\sigma^2_i \rightarrow \hat{u}^2_i 
+\qquad \rightarrow \qquad
+var(\hat\beta_1)=\frac{\sum_{i=1}^{n}(x_i-\bar{x})^2\hat u^2_{i}}{SSR_x^2}$$
+
+
+
+```{r}
+rlm<-coeftest(lm, vcov = vcovHC(lm, type = "HC0"))
+screenreg(list(REG = lm, ROBUST_REG = rlm), digits = 4)
+```
+
+Det ses at estimaterne er de samme, men standard fejlene er anderledes, nogle er større andre er mindre. Dette passer med at vi ved at hetroskedasticitet ikke er et problem for at finde estimaterne, det er først når vi skal lave følgeslutninger (hypotesetest, etc.)
+
+\pagebreak
+
+##Opgave 5: Test hypotesen $H_0 :\beta_2 = 1 \qquad\qquad H_1 : \beta_2 \neq 1$  
+hypotesen er at log løn er lig med 1, jeg skal se om den kan forkastes
+
+Normalt udregnes t-værdien som 
+$$t=\frac{\hat\beta_2-\beta)}{se(\hat\beta_2)}$$
+Hvor den sande beta er = o, dette giver t-værdien = 22.808 (Vi ville klart forkaset at logløn = 0, men dette er ikke spørgsmålet)
+men vi gør nu
+$$t=\frac{\hat\beta_2-1)}{se(\hat\beta_2)}$$
+
+```{r}
+(0.8218-1)/0.036
+qt(0.025,472)
+2*pt(-4.95,472)
+```
+Dette giver t-værdien = -4.95 (dette kan vi allerede se ikke er så godt, da n er stor, men vi kan finde en p-værdi)
+$H_0$ kan afvises på 5% signifikansniveau da vi afviser $H_0$ hvis $t<-1.96$ eller $t>1.96$
+Jeg kan også udregne p-værdien associeret med denne t-værdi, dette giver p=0.00000103
+
+Jeg forkaster at logløn er lig med 1
+\pagebreak
+
+##Opgave 6: Test hypotesen $H_0:\beta_3 = \beta_4 = 0$
+Der er 2 forskellige måder at forstå opgaven:
+
+
+1) At begge skal være lig 0, dette kan testes med en restricted model og en F-test
+$$F \equiv \frac{(SSR_r-SSR_{ur})/q} {SSR_{ur}/(n-k-1)}$$
+q = Nummerator degrees of freedom, altså hvor mange færre parametre den restricted model har (2),  
+k = Antal af parametre i modellen, den unrestricted (4)
+Dette kan også udregnes med $R^2$ værdierne hvis man ikke har $SSR$
+
+```{r}
+hypotese_a<-c("male=0","minority=0")
+linearHypothesis(lm, hypotese_a)
+
+#Unrestricted model og unrestricted
+ols.reg.unrestricted <- lm( lsalary ~ educ + lsalbegin + male + minority)
+ols.reg.restricted <- lm( lsalary ~ educ + lsalbegin)
+
+#Beregn q (antallet af variabler fjernet fra modellen)
+q <- ols.reg.restricted$df.residual-ols.reg.unrestricted$df.residual
+
+#Opnå r2
+unrestricted.r2 <- summary(ols.reg.unrestricted)$r.squared
+restricted.r2 <- summary(ols.reg.restricted)$r.squared
+
+#Beregning af F-test
+F <- ((restricted.r2-unrestricted.r2)/q)/((unrestricted.r2-1)/(471-2))
+1 - pf(F, 2, 467)
+```
+Vi kan se at vi med en F-test kan afvise at de to parametre begge er 0, med en p-værdi på 0.015
+
+2) Den anden måde at forstå opgaven: at estimatet på male og minority er lig med hinanden. I dette tilfælde finder vi t-værdien med følgende formel:
+$$t=\frac{(\hat\beta_3-\hat\beta_4)}{se(\hat\beta_3-\hat\beta_4)}$$
+desværre er 
+$$se(\hat\beta_3-\hat\beta_4) \neq se(\hat\beta_3)-se(\hat\beta_4)$$
+men vi kan gøre dette 
+$$se(\hat\beta_3-\hat\beta_4) = (se(\hat\beta_3)^2-se(\hat\beta_4)^2 - cov(\hat\beta_3,\hat\beta_4))^{0.5}$$
+Det er dog lidt besværligt at udregne det sidste, men derfor kan jeg gøre dette
+
+Først laver vi en ny variabel som er lig med forskellen mellem de to estimater, vi vil gerne vide om denne kunne være = 0 og derved muliggøre at estimatet for lønpåvirkningen af køn og etcinitet er ens. 
+$$\hat\beta_3-\hat\beta_4=\theta
+\qquad \rightarrow \qquad 
+\hat\beta_3=\theta+\hat\beta_4$$
+Vi kan indsætte dette i vores model, og omrokere
+$$lsalary = \beta_0 + \beta_1educ + \beta_2lsalbegin + (\theta+\beta_4)male + \beta_4minority)$$
+$$lsalary = \beta_0 + \beta_1educ + \beta_2lsalbegin + \theta male + \beta_4(minority+male)$$
+
+Nu kan jeg køre modellen igen og denne gang finde $se(\theta)$ for at finde konfidensintervallet for $\theta$ så skal vi +/- med ca. 2*standard fejlen
+```{r}
+#Jeg definerer theta og min samlede variabel
+theta<-summary(lm)$coefficients[4,1]-summary(lm)$coefficients[5,1]
+malenority<-(male+minority)
+
+#Nu kører jeg regressionen med den samlede
+lm3<-lm(lsalary ~ educ + lsalbegin + male + malenority)
+summary(lm3)$coefficients
+
+#Nu skal vi bruge standard fejlen på theta (som nu er på male)
+setheta<-summary(lm3)$coefficients[4,"Std. Error"]
+CI<-c((theta-(1.96*setheta)),(theta+(1.96*setheta)))
+
+#Nu får vi 95% konfidensintervallet på theta, som jo skal være 0
+CI
+```
+vi kan altså se at konfindens intervallet mellem $\beta_3$ og $\beta_4$ er: $[0.02925048 ; 0.151798]$
+Dette inkluderer ikke vores $H_0$ og vi kan derfor afvise $H_0$ med et 95% konfidensinterval
+
+Det betyder i realiteten at der er forskel på kønnet og om man er minioritet når det kommer til løn. Vi kan både afvise at de skulle være 0, og at "bias" skulle være ens. (vi kan også se på P-værdien at vi kan afvise ned til et 0.01% signifikansniveau)
+
+
+
+\pagebreak
+
+##Opgave 7: Estimer modellen vha. FGLS og kommenter på resultaterne
+Vi har tidligere vist at modellen er homoskedastisk, og vi skal nu korrigerer for det (en anden metode end den robuste)
+
+$$var(u\mid x) = \sigma^2exp(\delta_0+\delta_1x_1+\delta_2x_2+\delta_3x_3+\delta_4x_4)$$
+
+$$log(u^2) = a_0+\delta_1x_1+\delta_2x_2+\delta_3x_3+\delta_4x_4)+e$$
+med denne får vi de fitted values som vi indsætter i formlen $\hat{h_i}=exp(\hat{g}_i)$ Dette giver os vores vægt $w$
+
+```{r}
+lsqres<-log(sqres)
+lm4<-lm(lsqres ~ educ + lsalbegin + male + minority)
+w<-exp(fitted(lm4))
+lm5<-lm(lsalary ~ educ + lsalbegin + male + minority, weight=1/w)
+
+screenreg(list(REG = lm, ROBUST = rlm, FGLS = lm5), digits = 4)
+```
+
+Vi kan se at FGLS modellen har mindsket standard fejlene (se) men kun en lille smule
+
+
+\pagebreak
+
+##Opgave 8: Har FGLS estimationen taget højde for al heteroskedasticiteten?
+```{r}
+bptest(lm)
+bptest(lm5)
+
+```
+
+```{r echo=FALSE}
+plot(lm5, which=c(2))
+```
+
+Nej, der er stadig hetroskedasticitet
