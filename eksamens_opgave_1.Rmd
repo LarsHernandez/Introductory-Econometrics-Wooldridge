@@ -2,9 +2,7 @@
 title: "Eksamens opgave 1 - OLS og Hetroskedasticitet"
 author: "Lars Boerty Nielsen - 20134303"
 date: "25 sep 2017"
-output:
-  html_document: default
-  pdf_document: default
+output: github_document
 ---
 Betragt følgende model for bankansattes løn:
 $$\log(salar y) = \beta_0+\beta_1educ +\beta_2 log(salbeg in)+\beta_3male +\beta_4minor i t y +u$$
