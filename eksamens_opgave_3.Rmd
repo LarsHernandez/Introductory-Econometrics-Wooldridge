@@ -3,88 +3,76 @@ title: "Eksamens opgave 3 - Instrumentvariabel"
 author: "Lars Boerty Nielsen - 20134303"
 date: "16 okt 2017"
 output:
-  pdf_document: default
   html_document: default
 ---
-Betragt følgende model:
+Betragt f?lgende model:
 $$log(earnings)=\beta_0+\beta_1s+\beta_2wexp+\beta_3male+\beta_4ethblack+\beta_5ethhisp+u$$
   
-- $earnings$ er timeløn i US dollars
-- $s$ er uddannelse målt i antal års skolegang
-- $wexp$ er erhvervserfaring målt i antal år
-- $male$ er en dummy for køn
+- $earnings$ er timel?n i US dollars
+- $s$ er uddannelse m?lt i antal ?rs skolegang
+- $wexp$ er erhvervserfaring m?lt i antal ?r
+- $male$ er en dummy for k?n
 - $ethblack$ og $ethhisp$ er racedummier for hhv. afroamerikanere og hispanics
 
 Vi har desuden tre instrumenter:  
-- $sm$ moderens uddannelse målt i år
-- $sf$ faderens uddannelse målt i år 
-- $siblings$ antal søskende
+- $sm$ moderens uddannelse m?lt i ?r
+- $sf$ faderens uddannelse m?lt i ?r 
+- $siblings$ antal s?skende
 
-Datasættet data3, som er tilgængelig påMoodle, indeholder disse variable målt for
+Datas?ttet data3 (eth), som er tilg?ngelig p?Moodle, indeholder disse variable m?lt for
 540 amerikanere.
 
 ```{r, echo=FALSE,warning=FALSE, message=FALSE}
-library(readr)
+library(tidyverse)
 library(texreg)
 library(AER)
 library(car)
-data <- read_csv("eth_salary_data.csv")
 
-#Afhængige variabel
-earnings<-data$earnings
+eth <- read_csv("eth_salary_data.csv")
 
-#Uafhængige variabler
-s<-data$s
-wexp<-data$wexp
-male<-data$male
-ethblack<-data$ethblack
-ethhisp<-data$ethhisp
-
+#Afh?ngige variabel
+#Uafh?ngige variabler
 #Instrument variabler
-sm<-data$sm
-sf<-data$sf
-siblings<-data$siblings
 ```
 
 
-##1. Estimer modellen vha. OLS og kommenter på resultaterne.
+##1. Estimer modellen vha. OLS og kommenter p? resultaterne.
 ```{r}
-reg1<-lm(log(earnings) ~ s + wexp + male + ethblack + ethhisp)
+reg1 <- lm(log(earnings) ~ s + wexp + male + ethblack + ethhisp, data = eth)
 summary(reg1)
 ```
-Uddannelse, erfaring og køn (mand) har en positv effekt på lønnen, alle tre er signifikante. Vi kan se at der er en negtiv effekt på minioriteter, men disse er ikke særligt signifikante. med r^2 justeret kan vi forklare 36% af variationen. Det giver god mening af ingen af følgende er helt præcise til at forudsige løn da der også kan være tilfældigheder og talent.
+Uddannelse, erfaring og k?n (mand) har en positv effekt p? l?nnen, alle tre er signifikante. Vi kan se at der er en negtiv effekt p? minioriteter, men disse er ikke s?rligt signifikante. med r^2 justeret kan vi forklare 36% af variationen. Det giver god mening af ingen af f?lgende er helt pr?cise til at forudsige l?n da der ogs? kan v?re tilf?ldigheder og talent.
 
 
-##2. Hvorfor kunne vi være bekymrede for at uddannelse er endogen?
-Fordi education kan være korrelerret med evner (omitted variable bias), (folk med gode evner vælger måske mere uddannelse) som ikke indgår i modellen. Vi ønsker at helt isolere uddannelse. Fordi det er udladt er der en correlation mellem den endogene variabel og $u$ for modellen. Derfor siger vi at uddannelse er en endogen variabel.
+##2. Hvorfor kunne vi v?re bekymrede for at uddannelse er endogen?
+Fordi education kan v?re korrelerret med evner (omitted variable bias), (folk med gode evner v?lger m?ske mere uddannelse) som ikke indg?r i modellen. Vi ?nsker at helt isolere uddannelse. Fordi det er udladt er der en correlation mellem den endogene variabel og $u$ for modellen. Derfor siger vi at uddannelse er en endogen variabel.
 
 Dette giver et problem i forhold til fortolkning af modellen fordi vores estimater for uddannelse bliver biased hvis der er en korrelation med residualerne.
 
-Der er to måder at løse det på:
-Hvis det er muligt kan vi finde en **Proxy variabel:**. Dette kunne f.eks. være IQ. Denne kan medtages i modellen i stedet for evner (som er svære at kvantificere). En proxy skal være korreleret med den endogene variabel og den afhængige variabel. I dette tilfælde kan vi bare tilføje proxyen til vores OLS og gøre som normalt men Matematisk ændrer det lidt på modellen alt efter hvor god en proxy IQ er for evner: 
+Der er to m?der at l?se det p?:
+Hvis det er muligt kan vi finde en **Proxy variabel:**. Dette kunne f.eks. v?re IQ. Denne kan medtages i modellen i stedet for evner (som er sv?re at kvantificere). En proxy skal v?re korreleret med den endogene variabel og den afh?ngige variabel. I dette tilf?lde kan vi bare tilf?je proxyen til vores OLS og g?re som normalt men Matematisk ?ndrer det lidt p? modellen alt efter hvor god en proxy IQ er for evner: 
 
 $$x_{evner}^*=\delta_0+\delta_3x_3+v_3$$
 
 $$y=(\beta_0+\beta_3\delta_0)+\beta_1x_1+\beta_2x_2+\beta_3\delta_3x_3+u+\beta_3v_3$$
 
-At tilføje en **instrumeltal variabel** er den anden mulighed hvis vi ikke kan finde nogle gode proxyer. Denne skal være korreleret med den endogene variabel men ikke med den afhængige variabel (en proxy er altså en rigtig dårlig IV)
+At tilf?je en **instrumeltal variabel** er den anden mulighed hvis vi ikke kan finde nogle gode proxyer. Denne skal v?re korreleret med den endogene variabel men ikke med den afh?ngige variabel (en proxy er alts? en rigtig d?rlig IV)
 
-En vigtig detalje er at vi dog kun bekymrer os om at uddannelse er endogen da målet med modellen er at forklare afkastet af uddannelse. Der kan sagtens være modeller hvor uddannelse kan tages med uden at vi behøver bekymrer os om at den er endogen.
+En vigtig detalje er at vi dog kun bekymrer os om at uddannelse er endogen da m?let med modellen er at forklare afkastet af uddannelse. Der kan sagtens v?re modeller hvor uddannelse kan tages med uden at vi beh?ver bekymrer os om at den er endogen.
 
 \pagebreak
 
 ##3. Er $siblings$, $sm$ og $sf$ brugbare som instrumenter?
-Det første krav for om de er gode instrumenter er at de er korrelerede med den endogene, derfor laver vi en ny regression på den vi mistænker for endogenitet **(dette hedder reduced form equation)**
+Det f?rste krav for om de er gode instrumenter er at de er korrelerede med den endogene, derfor laver vi en ny regression p? den vi mist?nker for endogenitet **(dette hedder reduced form equation)**
 ```{r}
-#Jeg kører en regression for at se om mine IV er korreleret med den endogene $s$
-reg2<-lm(s ~ wexp + male + ethblack + ethhisp + sf + sm + siblings)
+#Jeg k?rer en regression for at se om mine IV er korreleret med den endogene $s$
+reg2 <- lm(s ~ wexp + male + ethblack + ethhisp + sf + sm + siblings, data = eth)
 summary(reg2)
 ```
-Her kan det ses på på 5% signifikansniveau er de alle korreleret med s, men den svageste er siblings med en p-værdi på 0,04. En anden vigtig egenskab for IV er at de ikke er korrelerede med den afængige variabel. Dette kan argumenteres teoretisk at der ikke er nogen grund til at mor eller fars uddannelse, eller antal søskende, skulle være korreleret med y.
+Her kan det ses p? p? 5% signifikansniveau er de alle korreleret med s, men den svageste er siblings med en p-v?rdi p? 0,04. En anden vigtig egenskab for IV er at de ikke er korrelerede med den af?ngige variabel. Dette kan argumenteres teoretisk at der ikke er nogen grund til at mor eller fars uddannelse, eller antal s?skende, skulle v?re korreleret med y.
 
 ```{r}
-H0 <- c("sf=0", "sm=0", "siblings=0")
-linearHypothesis(reg2, H0)
+linearHypothesis(reg2, c("sf = 0", "sm = 0", "siblings = 0"))
 ```
 
 \pagebreak
@@ -92,69 +80,75 @@ linearHypothesis(reg2, H0)
 ##4. Test om uddannelse er endogen.
 Jeg bruger nu instrumenterne til at teste om uddannelse er endogen, jeg tager residualerne fra reduced form equation som jeg lige har regnet i opgave 3:
 ```{r}
-reg3<-lm(s ~ wexp + male + ethblack + ethhisp + sf + sm + siblings)
-res= resid(reg3)
+# 9 = 4, 4 = 5, 99 = 6
 
-reg9<-lm(s ~ wexp + male + ethblack + ethhisp + sf)
-res3 <- reg9$residuals
+reg3 <- lm(s ~ wexp + male + ethblack + ethhisp + sf + sm + siblings, data = eth)
+res3 <- reg3$residuals
 
-reg4<-lm(log(earnings) ~ s + wexp + male + ethblack + ethhisp + res)
+reg4 <-lm(s ~ wexp + male + ethblack + ethhisp + sf, data = eth)
+res4 <- reg4$residuals
 
-reg99<-lm(log(earnings) ~ s + wexp + male + ethblack + ethhisp + res3)
+reg5 <-lm(log(earnings) ~ s + wexp + male + ethblack + ethhisp + res3, data = eth)
+reg6 <-lm(log(earnings) ~ s + wexp + male + ethblack + ethhisp + res4, data = eth)
 
-screenreg(list(INSTRUMENTS = reg4, INSTRUMENT.TEST = reg99), digits=4)
+screenreg(list(INSTRUMENTS = reg5, INSTRUMENT.TEST = reg6), digits=4)
 
 ```
-Vores $H_0$ er at der ikke er problemer med endogenitet, dette kan vi ikke afvise da vi har en høj p-værdi, som betyder at vi ikke kan afvise $H_0$, der er altså ikke tegn på endognitet i $s$ altså uddannelsesniveauet.
+Vores $H_0$ er at der ikke er problemer med endogenitet, dette kan vi ikke afvise da vi har en h?j p-v?rdi, som betyder at vi ikke kan afvise $H_0$, der er alts? ikke tegn p? endognitet i $s$ alts? uddannelsesniveauet.
 
-Hvis vi kun bruger $sf$ altså faderens uddannelse som IV så får vi at uddannelse er endogen med en p-værdi på 0,0018
+Hvis vi kun bruger $sf$ alts? faderens uddannelse som IV s? f?r vi at uddannelse er endogen med en p-v?rdi p? 0,0018
 
 \pagebreak
 
-##5. Estimer modellen vha. 2SLS hvor du gør brug af de tre beskrevne instrumenter. Sammenlign med resultaterne i spørgsmål 1.
+##5. Estimer modellen vha. 2SLS hvor du g?r brug af de tre beskrevne instrumenter. Sammenlign med resultaterne i sp?rgsm?l 1.
 
 ```{r}
-IVREG <- ivreg(log(earnings) ~ s + wexp + male + ethblack + ethhisp | wexp + male + ethblack + ethhisp + sf + sm + siblings)
+IVREG <- ivreg(log(earnings) ~ s + wexp + male + ethblack + ethhisp | wexp + male + ethblack + ethhisp + sf + sm + siblings, data = eth)
 screenreg(list(Reg = reg1, IVREG = IVREG), digits = 4)
 ```
-Den oprindelige model undervurderer effekten af uddannelse. dette gør vi op for når vi tilføjer Instrument Variablerne. men R^2 er dårligere end den første model, vi får også en mindre præcis model, dette er en normal konsekvens af 2SLS.
+Den oprindelige model undervurderer effekten af uddannelse. dette g?r vi op for n?r vi tilf?jer Instrument Variablerne. men R^2 er d?rligere end den f?rste model, vi f?r ogs? en mindre pr?cis model, dette er en normal konsekvens af 2SLS.
 
 \pagebreak
 
-##6. Udfør overidentifikationstestet. Hvad konkluderer du?
+##6. Udf?r overidentifikationstestet. Hvad konkluderer du?
 ```{r}
-res2<- resid(IVREG)
-reg5<-lm(res2 ~ wexp + male + ethblack + ethhisp + sf + sm + siblings)
-summary(reg5)
-r2<-summary(reg5)$r.squared
-n<-540
-n*r2
-pval <- 1-pchisq(n*r2,2)
+resIV <- resid(IVREG)
+reg7 <- lm(resIV ~ wexp + male + ethblack + ethhisp + sf + sm + siblings, data = eth)
+summary(reg7)
+
+r2 <- summary(reg7)$r.squared
+
+n <- 540
+n * r2
+
+pval <- 1 - pchisq(n * r2, 2)
 pval
 ```
-vi kan afvise $H_0$ om at den ikke er overspecificeret dvs. modellen er overspecificeret. Der er altså brugt for mange instrumenter (det kan vi se af den høje p-værdi fra lm-testen)
+vi kan afvise $H_0$ om at den ikke er overspecificeret dvs. modellen er overspecificeret. Der er alts? brugt for mange instrumenter (det kan vi se af den h?je p-v?rdi fra lm-testen)
 
 \pagebreak
 
-##7. Udfør hele analysen igen hvor du kun bruger $sm$ og $sf$ som instrumenter. Ændrer det på dine konklusioner?
+##7. Udf?r hele analysen igen hvor du kun bruger $sm$ og $sf$ som instrumenter. ?ndrer det p? dine konklusioner?
 
 ```{r}
-IVREG2<- ivreg(log(earnings) ~ s + wexp + male + ethblack + ethhisp | wexp + male + ethblack + ethhisp + sf + sm)
+IVREG2 <- ivreg(log(earnings) ~ s + wexp + male + ethblack + ethhisp | wexp + male + ethblack + ethhisp + sf + sm, data = eth)
 
 screenreg(list(REG = reg1, IVREG = IVREG, IVREG2 = IVREG2), digits = 4)
 
-res4<- resid(IVREG2)
-reg6<-lm(res4 ~ wexp + male + ethblack + ethhisp + sf + sm)
-r22<-summary(reg6)$r.squared
-n*r22
-pval2 <- 1-pchisq(n*r22,1)
+resIV2 <- resid(IVREG2)
+reg8 <- lm(resIV2 ~ wexp + male + ethblack + ethhisp + sf + sm, data = eth)
+
+r22 <- summary(reg8)$r.squared
+n * r22
+
+pval2 <- 1 - pchisq(n * r22, 1)
 pval2
 ```
   
 - sm og sf er brugbare so instrumenter
-- s er stadig endogen når vi kun bruger sm og sf
+- s er stadig endogen n?r vi kun bruger sm og sf
 - Estimaterne i 2SLS er lidt anderledes
-- Modellen er stadig overidentificeret, men ikke lige så meget som før
+- Modellen er stadig overidentificeret, men ikke lige s? meget som f?r
 
 
 

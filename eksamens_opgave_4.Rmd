@@ -5,81 +5,71 @@ date: "30 okt 2017"
 output:
   html_document: default
 ---
-I denne opgave undersøger vi hvilke faktorer der påvirker hvorvidt kvinder i Schweiz indgår i arbejdsstyrken.
 
-Den afhængige variabel er participation, en binær variabel der måler hvorvidt personen indgår i arbejdsstyrken. Derudover har vi syv forklarende variable: 
+I denne opgave unders?ger vi hvilke faktorer der p?virker hvorvidt kvinder i Schweiz indg?r i arbejdsstyrken.
+
+Den afh?ngige variabel er participation, en bin?r variabel der m?ler hvorvidt personen indg?r i arbejdsstyrken. Derudover har vi syv forklarende variable: 
 
 - $parcip$ deltagelsesraten for Schweisiske kvinder i arbejdsstyrken
-- $income$ indkomst der ikke er arbejdsrelateret målt i 1000 CHF
+- $income$ indkomst der ikke er arbejdsrelateret m?lt i 1000 CHF
 - $age$ alder
 - $agesq$ alder^2
-- $educ$ uddannelse målt i antal år
-- $youngkids$ antal børn under under 7 år
-- $oldkids$ antal børn over 7 år
-- $foreign$ en dummy-variabel der angiver om personer er udlænding
+- $educ$ uddannelse m?lt i antal ?r
+- $youngkids$ antal b?rn under under 7 ?r
+- $oldkids$ antal b?rn over 7 ?r
+- $foreign$ en dummy-variabel der angiver om personer er udl?nding
 
-Datasættet data4, som er tilgængelig på Moodle, indeholder disse variable målt for
+Datas?ttet data4 (kids), som er tilg?ngelig p? Moodle, indeholder disse variable m?lt for
 872 schweiziske kvinder.
 
 ```{r include=FALSE}
-library(readr)
+library(tidyverse)
 library(texreg)
 library(lmtest)
 library(sandwich)
 library(car)
 library(mfx)
-data4 <- read_csv("kids_salary_data.csv")
 
-#Afhængige variabel
-parcip<-data4$participation
-
-#Uafhængige variabler
-income<-data4$income
-age<-data4$age
-agesq<-age^2
-educ<-data4$educ
-youngkids<-data4$youngkids
-oldkids<-data4$oldkids
-foreign<-data4$foreign
+kids <- read_csv("kids_salary_data.csv")
 ```
 
 
-##1. Opstil en lineær regressionsmodel for participation hvor du bruger de beskrevne forklarende variable
+##1. Opstil en line?r regressionsmodel for participation hvor du bruger de beskrevne forklarende variable
 
 $$Participation=\beta_0+\beta_1income+\beta_2age+\beta_3agesq+\beta_4educ+\beta_5youngkids+\beta_6oldkids+\beta_7foreign+u$$
 
-(a) Estimer modellen vha. OLS og kommenter på resultaterne.
+(a) Estimer modellen vha. OLS og kommenter p? resultaterne.
 (b) Test om den partielle effekt af uddannelse er forskellig fra nul.
 (c) Test om den partielle effekt af alder er forskellig fra nul.
 
 
 ```{r}
-reg<-lm(parcip ~ income + age + agesq + educ + youngkids + oldkids + foreign)
+reg <- lm(participation ~ income + age + agesq + educ + youngkids + oldkids + foreign, data = kids)
 summary(reg)
 ```
 a)
   
-* Vi kan se estimater: da den afhængige er en dummy bliver det til en LMP og derfor tolkes resultaterne som sansynelighed
+* Vi kan se estimater: da den afh?ngige er en dummy bliver det til en LMP og derfor tolkes resultaterne som sansynelighed
 * Estimatet for uddannelse er positivt, men ikke signifikant
-* Alder er signifikant med en positiv effekt, der er altså større sansynelighed for at deltage i arbejdsmarkedet hvis 
-* Problemet med LPM er at vi kan opnå en sansynelighed for at deltage, eller ikke at deltage på under 0 og over 100, den tager ikke højde for ændrede marginalsansyneligheder, som i modellen altid er ens.
+* Alder er signifikant med en positiv effekt, der er alts? st?rre sansynelighed for at deltage i arbejdsmarkedet hvis 
+* Problemet med LPM er at vi kan opn? en sansynelighed for at deltage, eller ikke at deltage p? under 0 og over 100, den tager ikke h?jde for ?ndrede marginalsansyneligheder, som i modellen altid er ens.
 
 
-b) Dette kan aflæses i summary, men her:
+b) Dette kan afl?ses i summary, men her:
 
 ```{r}
 bptest(reg)
-reg.r<-coeftest(reg, vcov = vcovHC(reg, type = "HC0"))
+reg.r <- coeftest(reg, vcov = vcovHC(reg, type = "HC0"))
 screenreg(list(REG = reg, ROBUST_REG = reg.r), digits = 4)
 ```
 
 $$t=\frac{\hat\beta}{se(\hat\beta)}$$ 
-Vi kan se at p-værdien er høj og derfor kan vi ikke forkaste at uddannelse er lig 0 (da der er en høj p-værdi)
+Vi kan se at p-v?rdien er h?j og derfor kan vi ikke forkaste at uddannelse er lig 0 (da der er en h?j p-v?rdi)
 
-c) kan også aflæses i summary
+c) kan ogs? afl?ses i summary
 
-p = 0.0000007 og vi kan derfor forkaste at den skulle være lig 0
-Det er dog vigtigt i forhold til fortolkningen at der også er inkluderet agesq, og vi derfor ikke kan se på estimatet for age alene. vi kan med formlen
+p = 0.0000007 og vi kan derfor forkaste at den skulle v?re lig 0
+Det er dog vigtigt i forhold til fortolkningen at der ogs? er inkluderet agesq, og vi derfor ikke kan se p? estimatet for age alene. vi kan med formlen
 
 $$\frac{\triangle\hat{y}}{\triangle x} \approx \hat{\beta_1}+2\hat{\beta_2}x \qquad \xrightarrow{Toppunkt} \qquad x \approx \frac{\hat{\beta_1}}{2\hat{\beta_2}} \approx  \frac{0.03634}{2*-0.0009} \approx 35.2$$
 
@@ -88,7 +78,7 @@ $$\frac{\triangle\hat{y}}{\triangle x} \approx \hat{\beta_1}+2\hat{\beta_2}x \qq
 
 \pagebreak
 
-##2. Opstil både en logit- og en probit-model for participati on hvor du bruger de beskrevne forklarende variable.
+##2. Opstil b?de en logit- og en probit-model for participati on hvor du bruger de beskrevne forklarende variable.
 (a) Estimer modellerne.
 (b) Test om den partielle effekt af uddannelse er forskellig fra nul.
 Vi kan ikke forkaste $H_0$ og derfor er uddannelse ikke signifikant
@@ -98,11 +88,8 @@ $$Probit: \qquad G(z)=\phi(z)=\int_{-\infty}^{z} \frac{1}{\sqrt{2\pi}}exp(-u^2/2
 $$Logit: \qquad G(z)=(z)=\frac{exp(z)}{[1+exp(z)]}$$
 
 ```{r}
-#Logit
-logit<-glm(parcip ~ income + age + agesq + educ + youngkids + oldkids + foreign, family = binomial(link = "logit"))
-
-#Probit
-probit<-glm(parcip ~ income + age + agesq + educ + youngkids + oldkids + foreign, family = binomial(link = "probit"))
+logit  <- glm(participation ~ income + age + agesq + educ + youngkids + oldkids + foreign, data = kids, family = binomial(link = "logit"))
+probit <- glm(participation ~ income + age + agesq + educ + youngkids + oldkids + foreign, data = kids, family = binomial(link = "probit"))
 
 screenreg(list(Logit = logit, Probit = probit), digits = 4)
 ```
@@ -111,40 +98,37 @@ screenreg(list(Logit = logit, Probit = probit), digits = 4)
 b)
 
 ```{r}
-logit.r <- glm(parcip ~ income + age + agesq + youngkids + oldkids + foreign, family = binomial(link = "logit"))
-lrtest(logit, logit.r)
+logit.r  <- glm(participation ~ income + age + agesq + youngkids + oldkids + foreign, data = kids, family = binomial(link = "logit"))
+probit.r <- glm(participation ~ income + age + agesq + youngkids + oldkids + foreign, data = kids, family = binomial(link = "probit"))
 
-probit.r <- glm(parcip ~ income + age + agesq + youngkids + oldkids + foreign, family = binomial(link = "probit"))
+lrtest(logit, logit.r)
 lrtest(probit, probit.r)
 ```
-Vi kan stadig ikke forkaste h_0 om at den partielle effekt kan være 0
+Vi kan stadig ikke forkaste h_0 om at den partielle effekt kan v?re 0
 
-c) gøres på samme måde som i b
-Vi kan forkaste at age skulle være lig 0 effekt
+c) g?res p? samme m?de som i b
+Vi kan forkaste at age skulle v?re lig 0 effekt
 
 \pagebreak
 
-##3. Vi vil gerne sammenligne den partielle effekt af income på tværs af modellerne.
-Beregn average partial effect (APE) og kommenter på resultaterne.
+##3. Vi vil gerne sammenligne den partielle effekt af income p? tv?rs af modellerne.
+Beregn average partial effect (APE) og kommenter p? resultaterne.
 ```{r}
 #APE Average Partial Effect
-logit2<-logitmfx(logit, data = data4, atmean=FALSE)
-probit2<-probitmfx(probit, data = data4, atmean=FALSE)
+logit2  <- logitmfx(logit, data = kids, atmean = FALSE)
+probit2 <- probitmfx(probit, data = kids, atmean = FALSE)
 
-screenreg(list(LPM = reg, Logit = logit, Probit = probit, APELOGIT = logit2, APEPROBIT = probit2),
-digits = 4)
-
+screenreg(list(LPM = reg, Logit = logit, Probit = probit, APELOGIT = logit2, APEPROBIT = probit2), digits = 4)
 ```
 APE er den gennemsnitlige partielle effekt
 
 \pagebreak
 
-##4. Vi vil gerne sammenligne den partielle effekt af foreign på tværs af modellerne.
-Beregn APE og kommenter på resultaterne.
+##4. Vi vil gerne sammenligne den partielle effekt af foreign p? tv?rs af modellerne.
+Beregn APE og kommenter p? resultaterne.
 
 ```{r}
-
-partiel <- cbind(1, as.matrix(data4[c("income", "age", "agesq", "educ", "youngkids", "oldkids", "foreign")]))
+partiel <- cbind(1, as.matrix(kids[c("income", "age", "agesq", "educ", "youngkids", "oldkids", "foreign")]))
 cdata1 <- partiel
 cdata1[, 8] <- 1
 cdata2 <- partiel
@@ -152,31 +136,29 @@ cdata2[, 8] <- 0
 mean(pnorm(cdata1 %*% probit$coef) - pnorm(cdata2 %*% probit$coef))
 mean(plogis(cdata1 %*% logit$coef) - plogis(cdata2 %*% logit$coef))
 ```
-Dette er den partielle effekt i at gå fra at være ikke udlænding til at være udlænding, den er det samme som vores APE estimat. Det mere interessante er at besvare hvad der sker ved at gå fra 2 - 3 børn?
+Dette er den partielle effekt i at g? fra at v?re ikke udl?nding til at v?re udl?nding, den er det samme som vores APE estimat. Det mere interessante er at besvare hvad der sker ved at g? fra 2 - 3 b?rn?
 
 \pagebreak
 
-##5. Hvorfor er APE at foretrække frem for partial effect at the average (PEA)?
+##5. Hvorfor er APE at foretr?kke frem for partial effect at the average (PEA)?
 
 $$\widehat{PEA}_j=\hat\beta_j g(\boldsymbol{\bar{x}}\hat\beta) \qquad \widehat{APE}_j=\hat\beta_j \Bigg[n^{-1}\sum^N_{i=1}g(\boldsymbol{x}_i\hat\beta) \Bigg]$$
 
-Den gennemsnitlige person er måske ikke så gennemsnitlig (f.eks. hvis man er halvt udlænding eller har 1.5 barn)
+Den gennemsnitlige person er m?ske ikke s? gennemsnitlig (f.eks. hvis man er halvt udl?nding eller har 1.5 barn)
 
 
 
 
-##6. Sammenlign modellernes evne til at prædiktere ved at beregne percent correctly predicted for hver model.
+##6. Sammenlign modellernes evne til at pr?diktere ved at beregne percent correctly predicted for hver model.
 ```{r}
-y<-data4$participation
-lpmpred <- 100 * mean((reg$fitted > 0.5) == y)
+lpmpred    <- 100 * mean((reg$fitted > 0.5) == kids$participation)
+logitpred  <- 100 * mean((logit$fitted > 0.5) == kids$participation)
+probitpred <- 100 * mean((probit$fitted > 0.5) == kids$participation)
+
 lpmpred
-
-logitpred<- 100 * mean((logit$fitted > 0.5) == y)
 logitpred
-
-probitpred<- 100 * mean((probit$fitted > 0.5) == y)
 probitpred
 ```
 
-Resultatet handler omm hvor gode de er til at forudse værdien, vi kan se at logit og probit begge er bedre til at gætte end LPM. 
+Resultatet handler omm hvor gode de er til at forudse v?rdien, vi kan se at logit og probit begge er bedre til at g?tte end LPM. 
 
