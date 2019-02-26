@@ -1,10 +1,15 @@
 ---
-title: "Eksamens opgave 1 - OLS og Hetroskedasticitet"
+title: "1. Eksamenssæt - OLS og Hetroskedasticitet"
 author: "Lars Boerty Nielsen - 20134303"
 date: "25 sep 2017"
 output:
   html_document: default
+    #toc: true
+    #toc_float: true
 ---
+# {.tabset .tabset-fade .tabset-pills}
+
+## Data
 Betragt følgende model for bankansattes løn:
 $$\log(salar y) = \beta_0+\beta_1educ +\beta_2 log(salbeg in)+\beta_3male +\beta_4minor i t y +u$$
   
@@ -28,7 +33,8 @@ library(ggplot2)
 wage <- read_csv("data/educ_salary_data.csv")
 ```
 
-##Opgave 1: Estimer modellen vha. OLS. Kommenter på outputtet og fortolk resultaterne.
+## Opgave 1
+**Estimer modellen vha. OLS. Kommenter på outputtet og fortolk resultaterne**
 ```{r}
 #MLR - Multiple linær regression
 reg1 <-lm(lsalary ~ educ + lsalbegin + male + minority, data = wage)
@@ -73,7 +79,9 @@ Vi kan også se at uddannelse og start løn er meget signigikante, mens køn og 
 
 \pagebreak
 
-##Opgave 2: Udfør grafisk modelkontrol.
+## Opgave 2
+**Udfør grafisk modelkontrol**
+
 ```{r, echo=FALSE}
 par(mfrow = c(2,2))
 plot(reg1)
@@ -106,7 +114,9 @@ På de 4 sidste grafer er der individuelle regressioner og de bekræfter forhold
 
 \pagebreak
 
-##Opgave 3: Test for heteroskedasticitet vha. Breusch-Pagan-testet og specialudgaven af White-testet
+## Opgave 3
+**Test for heteroskedasticitet vha. Breusch-Pagan-testet og specialudgaven af White-testet**
+
 Hetroskedasticitet er når variansen ikke er konstant over $u$ Dette skal være opfyldt i for at kunne hypoteseteste og udregne standard fejl. Her ses kravet for hetroskedasticitet, $H_1$:
 $$H_0=Var(u|x)=\sigma^2 
 \qquad 
@@ -170,7 +180,8 @@ Her kan vi igen afvise homoskedacitet ved 5% signifikansniveau
 
 \pagebreak
 
-##Opgave 4: Beregn robuste standardfejl for modellen og sammenlign med resultaterne i spørgsmål 1.
+## Opgave 4
+**Beregn robuste standardfejl for modellen og sammenlign med resultaterne i spørgsmål 1**
 Vi kan udregne disse med R: disse er anderledes fordi at modellen udviser hetroskedasitet. Udregningen af disse er en nyere metode og matematisk uden for pensum, men den korregerer for ukendt hetroskedasticitet. Den kan gøre dette på flere måder som afhænger af hvordan data ser ud. Jeg bruger HC0
 
 $$
@@ -192,7 +203,9 @@ Det ses at estimaterne er de samme, men standard fejlene er anderledes, nogle er
 
 \pagebreak
 
-##Opgave 5: Test hypotesen $H_0 :\beta_2 = 1 \qquad\qquad H_1 : \beta_2 \neq 1$  
+## Opgave 5
+**Test hypotesen $H_0 :\beta_2 = 1 \qquad\qquad H_1 : \beta_2 \neq 1$**
+
 hypotesen er at log løn er lig med 1, jeg skal se om den kan forkastes
 
 Normalt udregnes t-værdien som 
@@ -213,7 +226,8 @@ Jeg kan også udregne p-værdien associeret med denne t-værdi, dette giver p=0.
 Jeg forkaster at logløn er lig med 1
 \pagebreak
 
-##Opgave 6: Test hypotesen $H_0:\beta_3 = \beta_4 = 0$
+## Opgave 6
+**Test hypotesen $H_0:\beta_3 = \beta_4 = 0$**
 Der er 2 forskellige måder at forstå opgaven:
 
 
@@ -285,7 +299,9 @@ Det betyder i realiteten at der er forskel på kønnet og om man er minioritet n
 
 \pagebreak
 
-##Opgave 7: Estimer modellen vha. FGLS og kommenter på resultaterne
+## Opgave 7
+**Estimer modellen vha. FGLS og kommenter på resultaterne**
+
 Vi har tidligere vist at modellen er homoskedastisk, og vi skal nu korrigerer for det (en anden metode end den robuste)
 
 $$var(u\mid x) = \sigma^2exp(\delta_0+\delta_1x_1+\delta_2x_2+\delta_3x_3+\delta_4x_4)$$
@@ -307,7 +323,8 @@ Vi kan se at FGLS modellen har mindsket standard fejlene (se) men kun en lille s
 
 \pagebreak
 
-##Opgave 8: Har FGLS estimationen taget højde for al heteroskedasticiteten?
+## Opgave 8
+**Har FGLS estimationen taget højde for al heteroskedasticiteten?**
 ```{r}
 bptest(reg1)
 bptest(reg5)
